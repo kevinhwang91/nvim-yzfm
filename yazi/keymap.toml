@@ -1,0 +1,10 @@
+# Fixed mappings for the embedded Yazi profile.
+# The plugin prepends these entries to the user's existing keymap.toml.
+
+[mgr]
+prepend_keymap = [
+    { on = "<C-o>", run = "open", desc = "Open in the current buffer" },
+    { on = "<C-x>", run = "open", desc = "Open in a horizontal split" },
+    { on = "<C-v>", run = "open", desc = "Open in a vertical split" },
+    { on = "<C-t>", run = "open", desc = "Open in a new tab" },
+]
