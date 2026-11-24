@@ -1,9 +1,9 @@
-if vim.g.loaded_nvim_yzfm then
-  return
+if vim.g.loadedNvimYzfm then
+    return
 end
-vim.g.loaded_nvim_yzfm = true
+vim.g.loadedNvimYzfm = true
 
-local yazi = require("nvim-yzfm")
-if not yazi.is_configured() then
-  yazi.setup()
+local yazi = require('nvim-yzfm')
+if not yazi.isConfigured() then
+    yazi.setup()
 end

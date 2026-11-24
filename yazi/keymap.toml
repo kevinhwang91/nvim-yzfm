@@ -3,8 +3,11 @@
 
 [mgr]
 prepend_keymap = [
-    { on = "<C-o>", run = "open", desc = "Open in the current buffer" },
-    { on = "<C-x>", run = "open", desc = "Open in a horizontal split" },
-    { on = "<C-v>", run = "open", desc = "Open in a vertical split" },
-    { on = "<C-t>", run = "open", desc = "Open in a new tab" },
+    { on = "<C-o>", run = "plugin --mode=sync nvim-yzfm -- edit", desc = "Open in the current buffer" },
+    { on = "<C-x>", run = "plugin --mode=sync nvim-yzfm -- split", desc = "Open in a horizontal split" },
+    { on = "<C-v>", run = "plugin --mode=sync nvim-yzfm -- vsplit", desc = "Open in a vertical split" },
+    { on = "<C-t>", run = "plugin --mode=sync nvim-yzfm -- tabedit", desc = "Open in a new tab" },
+    { on = "l", run = "plugin --mode=sync nvim-yzfm -- edit", desc = "Enter directory or open file" },
+    { on = "<Enter>", run = "plugin --mode=sync nvim-yzfm -- edit", desc = "Enter directory or open file" },
+    { on = "q", run = "plugin --mode=sync nvim-yzfm -- quit", desc = "Quit Yazi" },
 ]
