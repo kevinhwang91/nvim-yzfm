@@ -9,5 +9,4 @@ prepend_keymap = [
     { on = "<C-t>", run = "plugin --mode=sync nvim-yzfm -- tabedit", desc = "Open in a new tab" },
     { on = "l", run = "plugin --mode=sync nvim-yzfm -- edit", desc = "Enter directory or open file" },
     { on = "<Enter>", run = "plugin --mode=sync nvim-yzfm -- edit", desc = "Enter directory or open file" },
-    { on = "q", run = "plugin --mode=sync nvim-yzfm -- quit", desc = "Quit Yazi" },
 ]

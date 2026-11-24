@@ -3,6 +3,20 @@
 local M = {}
 local eventOpen = 'nvim-yzfm-open'
 
+local function keybindingPayload(job, action, paths)
+    local payload = {
+        action = action or 'edit',
+        paths = paths,
+    }
+    if job.args.keybinding then
+        payload.mode = action or 'edit'
+        if job.args.picker == 'false' or job.args.picker == false then
+            payload.picker = false
+        end
+    end
+    return payload
+end
+
 local function selectedFiles()
     local paths = {}
     local hasDirectory = false
@@ -27,17 +41,10 @@ end
 
 function M:entry(job)
     local action = job.args[1]
-    if action == 'quit' then
-        ya.emit('quit', {})
-        return
-    end
 
     local paths, hasDirectory = selectedFiles()
     if #paths == 0 and hasDirectory then
-        ps.pub_to(0, eventOpen, {
-            action = action or 'edit',
-            paths = {},
-        })
+        ps.pub_to(0, eventOpen, keybindingPayload(job, action, {}))
         ya.emit('enter', {})
         return
     end
@@ -45,10 +52,7 @@ function M:entry(job)
         return
     end
 
-    ps.pub_to(0, eventOpen, {
-        action = action or 'edit',
-        paths = paths,
-    })
+    ps.pub_to(0, eventOpen, keybindingPayload(job, action, paths))
 end
 
 return M

@@ -3,7 +3,7 @@ if vim.g.loadedNvimYzfm then
 end
 vim.g.loadedNvimYzfm = true
 
-local yazi = require('nvim-yzfm')
+local yazi = require('yzfm')
 if not yazi.isConfigured() then
     yazi.setup()
 end
