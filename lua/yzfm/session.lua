@@ -189,7 +189,7 @@ local function startYazi(path, openMode)
 
     state.yaziJob = job
     startResizeMonitor()
-    dds.subscribe(job, state.clientId, configHome, M.openFiles)
+    dds.subscribe(job, state.clientId, configHome, M.openFiles, files.applyChanges)
     vim.defer_fn(function()
         if generation == state.generation and window.isVisible() then
             window.enterTerminal()

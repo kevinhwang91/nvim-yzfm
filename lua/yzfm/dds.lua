@@ -3,6 +3,7 @@ local config = require('yzfm.config')
 local M = {}
 local eventOpen = 'nvim-yzfm-open'
 local eventResize = 'nvim-yzfm-resize'
+local eventFiles = 'nvim-yzfm-files'
 local subscription
 
 local function environment(configHome)
@@ -51,6 +52,7 @@ function M.publishTo(receiver, kind, payload, configHome)
 end
 
 M.eventResize = eventResize
+M.eventFiles = eventFiles
 
 function M.unsubscribe()
     local current = subscription
@@ -66,7 +68,7 @@ local function parseSubscriberLine(line, current)
     end
 
     local kind, _, sender, body = line:match('^([^,]+),([^,]+),([^,]+),(.*)$')
-    if kind ~= eventOpen or not body or
+    if (kind ~= eventOpen and kind ~= eventFiles) or not body or
         (current.clientId and sender ~= tostring(current.clientId)) then
         return
     end
@@ -75,11 +77,14 @@ local function parseSubscriberLine(line, current)
     if ok and type(payload) == 'table' then
         -- Job callbacks run in a fast event.  Opening a buffer changes windows and
         -- must be deferred to the main Neovim event loop.
-        vim.schedule(function()
-            if subscription == current then
-                current.onOpen(payload)
-            end
-        end)
+        local callback = kind == eventOpen and current.onOpen or current.onFiles
+        if callback then
+            vim.schedule(function()
+                if subscription == current then
+                    callback(payload)
+                end
+            end)
+        end
     end
 end
 
@@ -116,7 +121,7 @@ local function scheduleSubscriber(current, delay)
             return
         end
 
-        local job = vim.fn.jobstart({config.options.ya, 'sub', eventOpen}, {
+        local job = vim.fn.jobstart({config.options.ya, 'sub', eventOpen .. ',' .. eventFiles}, {
             stdout_buffered = false,
             stdin = 'null',
             env = environment(current.configHome),
@@ -138,12 +143,13 @@ local function scheduleSubscriber(current, delay)
     end, delay)
 end
 
-function M.subscribe(yaziJob, clientId, configHome, onOpen)
+function M.subscribe(yaziJob, clientId, configHome, onOpen, onFiles)
     subscription = {
         yaziJob = yaziJob,
         clientId = clientId,
         configHome = configHome,
         onOpen = onOpen,
+        onFiles = onFiles,
         partial = '',
     }
     -- Wait for Yazi to publish its DDS endpoint before starting `ya sub`.

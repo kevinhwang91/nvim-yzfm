@@ -88,6 +88,8 @@ The floating window follows both Neovim's `VimResized` event and a lightweight 1
 
 Each active Yazi process also receives a best-effort DDS resize message through the remote kind `nvim-yzfm-resize`. Its JSON body contains the current floating-window `width`, `height`, one-based `preset`, and a `reason` (`open`, `show`, `preset`, or `window`). Yazi plugins can subscribe with `ps.sub_remote` during setup. No subscriber is required: an absent subscriber is treated as a normal no-op and never produces a Neovim notification.
 
+The embedded adapter also forwards Yazi's file-operation events through `nvim-yzfm-files`. Rename, bulk rename, and move operations rebind clean loaded Neovim buffers to their new paths, including buffers below a moved directory, so later `:write` commands do not require an overwrite bang. Modified buffers stay at their old path and a warning is shown rather than silently saving their unsaved content during a file-manager operation. Trash and permanent delete operations remove matching clean buffers; modified buffers are kept and warned about. This synchronization is built into the decorated profile and does not require a user Yazi plugin or configuration change.
+
 The overlay always initializes the embedded resize-aware view-mode feature in `nvim-yzfm` with the `viewmode` values from the Neovim setup:
 
 ```lua
@@ -108,6 +110,6 @@ No external Lua dependency is required.
 
 - `init.lua` exposes the Lua API and registers Neovim commands and mappings.
 - `session.lua` manages the Yazi process and selection lifecycle. `dds.lua` handles communication with `ya`.
-- `window.lua` owns the floating terminal, shadow, and layout. `files.lua` resolves paths and opens them in Neovim.
+- `window.lua` owns the floating terminal, shadow, and layout. `files.lua` opens selected paths and synchronizes Yazi file operations with Neovim buffers.
 - `config.lua` generates the embedded Yazi configuration. `keymap.lua` renders the decorated keymap.
 - `startup.lua` handles a directory passed to Neovim at startup.

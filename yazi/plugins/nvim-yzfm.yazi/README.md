@@ -28,3 +28,18 @@ end
 ```
 
 The event is optional. If no plugin subscribes, the publish is discarded silently and the Neovim session continues normally.
+
+## File-operation events
+
+The adapter subscribes to Yazi's built-in `rename`, `bulk-rename`, `move`, `trash`, and `delete` events. It normalizes their paths and publishes them to the Neovim host as the remote `nvim-yzfm-files` event:
+
+```json
+{
+  "kind": "move",
+  "changes": [
+    {"from": "/tmp/old.txt", "to": "/tmp/new.txt"}
+  ]
+}
+```
+
+Delete events use a `paths` array instead of `changes`. The Neovim side rebinds clean loaded buffers for rename and move events, and wipes matching clean buffers for trash and delete events. Modified buffers are intentionally left at their old path and available for recovery.

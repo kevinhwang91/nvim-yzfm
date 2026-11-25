@@ -3,6 +3,9 @@
 local M = {}
 local eventOpen = 'nvim-yzfm-open'
 local resizeEvent = 'nvim-yzfm-resize'
+local fileEvent = 'nvim-yzfm-files'
+local fileEventKinds = {'rename', 'bulk-rename', 'move', 'trash', 'delete'}
+local fileEventsSubscribed = false
 local viewMode = {
     settings = {
         large = {ratio = {5, 8, 12}, min_width = 90},
@@ -84,6 +87,94 @@ local function onResize(payload)
     setRatio(ratioForWidth(width))
 end
 
+local function pathString(value)
+    if value == nil then
+        return nil
+    end
+    local path = tostring(value)
+    return path ~= '' and path or nil
+end
+
+local function appendChange(changes, from, to)
+    from, to = pathString(from), pathString(to)
+    if from and to then
+        changes[#changes + 1] = {from = from, to = to}
+    end
+end
+
+local function appendPaths(paths, values)
+    if values == nil then
+        return
+    end
+    pcall(function()
+        for _, value in pairs(values) do
+            local path = pathString(value)
+            if path then
+                paths[#paths + 1] = path
+            end
+        end
+    end)
+end
+
+local function publishFileEvent(kind, body)
+    if kind == 'rename' then
+        local changes = {}
+        appendChange(changes, body and body.from, body and body.to)
+        if #changes > 0 then
+            ps.pub_to(0, fileEvent, {kind = kind, changes = changes})
+        end
+        return
+    end
+
+    if kind == 'bulk-rename' then
+        local changes = {}
+        pcall(function()
+            for from, to in pairs(body) do
+                appendChange(changes, from, to)
+            end
+        end)
+        if #changes > 0 then
+            ps.pub_to(0, fileEvent, {kind = kind, changes = changes})
+        end
+        return
+    end
+
+    if kind == 'move' then
+        local changes = {}
+        pcall(function()
+            for _, item in pairs(body and body.items or {}) do
+                appendChange(changes, item.from, item.to)
+            end
+        end)
+        if #changes > 0 then
+            ps.pub_to(0, fileEvent, {kind = kind, changes = changes})
+        end
+        return
+    end
+
+    if kind == 'trash' or kind == 'delete' then
+        local paths = {}
+        appendPaths(paths, body and body.urls)
+        if #paths > 0 then
+            ps.pub_to(0, fileEvent, {kind = kind, paths = paths})
+        end
+    end
+end
+
+local function subscribeFileEvents()
+    if fileEventsSubscribed then
+        return
+    end
+    fileEventsSubscribed = true
+    for _, kind in ipairs(fileEventKinds) do
+        pcall(function()
+            ps.sub(kind, function(body)
+                publishFileEvent(kind, body)
+            end)
+        end)
+    end
+end
+
 function viewMode:setup(options)
     applyViewModeSettings(options)
     local initialWidth = type(options) == 'table' and tonumber(options.initial_width)
@@ -146,6 +237,7 @@ end
 
 function M:setup(options)
     viewMode:setup(options)
+    subscribeFileEvents()
     return self
 end
 
