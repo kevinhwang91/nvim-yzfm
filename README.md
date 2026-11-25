@@ -32,6 +32,11 @@ require('yzfm').setup({
         title_pos = 'center',
         shadow = 70,
     },
+    viewmode = {
+        large = {ratio = {5, 8, 12}, min_width = 90},
+        tiny = {ratio = {1, 1, 0}, min_width = 50, max_width = 89},
+        small = {ratio = {0, 1, 0}, max_width = 49},
+    },
     key_maps = {
         toggle = '<M-o>',
         resize = '<M-i>',
@@ -47,7 +52,7 @@ require('yzfm').setup({
 })
 ```
 
-`key_bindings` are written directly into the generated Yazi keymap. Each mapping records its open mode and sends the selected paths back to Neovim without a terminal-buffer mapping layer. Picker behavior defaults to `true`: the selected file opens in a normal Neovim window and the floating Yazi window is hidden. Set `picker = false` on a binding to keep the floating window visible. The same modes are also available through `:YaziSplit`, `:YaziVsplit`, and `:YaziTabedit`.
+`key_bindings` are written directly into the generated Yazi keymap. Each mapping records its open mode and sends the selected paths back to Neovim without a terminal-buffer mapping layer. Picker behavior defaults to `true`: the selected file opens in a normal Neovim window and the floating Yazi window is hidden. Set `picker = false` on a binding to keep the floating window visible.
 
 Configuration keys use snake_case to match Neovim's native option names where applicable: `floating_window`, `key_maps`, and `key_bindings`.
 
@@ -65,7 +70,7 @@ The fixed open modes are `edit` (`:drop`), `split`, `vsplit`, and `tabedit`. The
 
 The decoration is always enabled and is not a setup option. The fixed profile lives in the plugin's [`yazi/keymap.toml`](/home/kevin/.local/share/nvim/site/pack/core/opt/nvim-yzfm/yazi/keymap.toml). The child process receives `YAZI_CONFIG_HOME` pointing to the generated overlay under Neovim's cache directory.
 
-The original configuration is taken from `$YAZI_CONFIG_HOME`, `$XDG_CONFIG_HOME/yazi`, or `~/.config/yazi`. Every file except `keymap.toml` is symlinked into the overlay, so opener rules, previews, themes, plugins, flavors, and drag-and-drop settings remain unchanged. The fixed profile keymap is prepended to the original keymap on every launch.
+The original configuration is taken from `$YAZI_CONFIG_HOME`, `$XDG_CONFIG_HOME/yazi`, or `~/.config/yazi`. Every file except `keymap.toml` and `init.lua` is symlinked into the overlay, so opener rules, previews, themes, plugins, flavors, and drag-and-drop settings remain unchanged. The fixed profile keymap is prepended to the original keymap on every launch. The overlay generates `init.lua` from the original file and always initializes the embedded `nvim-yzfm` plugin; the original init file is never modified. Other Yazi plugins, including `file-actions` and a user's `viewmode`, remain controlled by the user's own configuration. The `nvim-yzfm.yazi` name is reserved for the embedded adapter and view-mode feature.
 
 The parent process's `YAZI_CONFIG_HOME` is not changed.
 
@@ -73,11 +78,29 @@ This means an existing Yazi setup can stay untouched. Preview mappings and inter
 
 ## Commands and lifecycle
 
-The plugin defines `:YaziToggle`, `:YaziResize`, `:YaziSplit`, `:YaziVsplit`, and `:YaziTabedit`.
+The plugin defines `:YaziToggle` and `:YaziResize`.
 
 `:YaziToggle` hides or shows the same running process. When Yazi exits, the float is closed and the original tab/window is restored before selected files are opened.
 
 `:YaziResize` and the configured resize key cycle the built-in 60%, 80%, 86%, and 95% layouts. A terminal/editor resize recalculates the current layout without changing the selected preset.
+
+The floating window follows both Neovim's `VimResized` event and a lightweight 100 ms observer while Yazi is active. The observer covers tmux pane resizes where the terminal child can receive the resize notification before Neovim redraws.
+
+Each active Yazi process also receives a best-effort DDS resize message through the remote kind `nvim-yzfm-resize`. Its JSON body contains the current floating-window `width`, `height`, one-based `preset`, and a `reason` (`open`, `show`, `preset`, or `window`). Yazi plugins can subscribe with `ps.sub_remote` during setup. No subscriber is required: an absent subscriber is treated as a normal no-op and never produces a Neovim notification.
+
+The overlay always initializes the embedded resize-aware view-mode feature in `nvim-yzfm` with the `viewmode` values from the Neovim setup:
+
+```lua
+require("nvim-yzfm"):setup({
+    large = {ratio = {5, 8, 12}, min_width = 90},
+    tiny = {ratio = {1, 1, 0}, min_width = 50, max_width = 89},
+    small = {ratio = {0, 1, 0}, max_width = 49},
+})
+```
+
+The embedded view-mode feature selects a matching `large`, `tiny`, or `small` view by its `min_width` and `max_width`: `large` is three columns, `tiny` is two columns, and `small` is the single-column fallback. Pressing `~` cycles `small → tiny → large → small`. The floating yzfm instance invokes it through `plugin --mode=sync nvim-yzfm -- viewmode`, while a user's `viewmode.yazi` remains untouched and available to normal Yazi sessions outside yzfm.
+
+The current floating width is applied as the initial view mode before Yazi's first render. Re-showing a hidden instance publishes the width before it is focused, so a narrow float does not visibly transition from `tiny` to `small`.
 
 No external Lua dependency is required.
 

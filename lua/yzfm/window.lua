@@ -124,10 +124,11 @@ end
 function M.cycleLayout()
     local presets = config.options.floating_window.presets
     if type(presets) ~= 'table' or #presets == 0 then
-        return
+        return false
     end
     state.layoutIndex = state.layoutIndex % #presets + 1
     M.resize()
+    return true
 end
 
 function M.selectInitialLayout()
@@ -213,6 +214,29 @@ end
 
 function M.hasBuffer()
     return validBuf(state.buf)
+end
+
+function M.currentSize()
+    local winConfig
+    if validWin(state.win) then
+        local ok
+        ok, winConfig = pcall(api.nvim_win_get_config, state.win)
+        if not ok or type(winConfig) ~= 'table' then
+            return nil
+        end
+    else
+        winConfig = windowConfig()
+    end
+
+    if type(winConfig.width) ~= 'number' or type(winConfig.height) ~= 'number' then
+        return nil
+    end
+
+    return {
+        width = winConfig.width,
+        height = winConfig.height,
+        preset = state.layoutIndex,
+    }
 end
 
 function M.focus()

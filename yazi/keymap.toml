@@ -3,6 +3,7 @@
 
 [mgr]
 prepend_keymap = [
+    { on = "~", run = "plugin --mode=sync nvim-yzfm -- viewmode", desc = "Cycle small, tiny, and large views" },
     { on = "<C-o>", run = "plugin --mode=sync nvim-yzfm -- edit", desc = "Open in the current buffer" },
     { on = "<C-x>", run = "plugin --mode=sync nvim-yzfm -- split", desc = "Open in a horizontal split" },
     { on = "<C-v>", run = "plugin --mode=sync nvim-yzfm -- vsplit", desc = "Open in a vertical split" },

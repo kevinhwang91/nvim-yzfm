@@ -6,13 +6,54 @@ local window = require('yzfm.window')
 
 local M = {}
 local state = {generation = 0}
+local resizeTimer
+local observedColumns
+local observedLines
+
+local function stopResizeMonitor()
+    if not resizeTimer then
+        return
+    end
+    resizeTimer:stop()
+    resizeTimer:close()
+    resizeTimer = nil
+end
+
+local function resizeMonitorTick()
+    local columns = vim.o.columns
+    local lines = vim.o.lines
+    if columns == observedColumns and lines == observedLines then
+        return
+    end
+    observedColumns = columns
+    observedLines = lines
+    if M.active() and window.isVisible() then
+        M.resizeWindow()
+    end
+end
+
+local function startResizeMonitor()
+    if resizeTimer then
+        return
+    end
+
+    local uv = vim.uv or vim.loop
+    if not uv or not uv.new_timer then
+        return
+    end
+
+    observedColumns = vim.o.columns
+    observedLines = vim.o.lines
+    resizeTimer = uv.new_timer()
+    resizeTimer:start(100, 100, vim.schedule_wrap(resizeMonitorTick))
+end
 
 local function jobRunning(job)
     return job and vim.fn.jobwait({job}, 0)[1] == -1
 end
 
-local function buildYaziCommand(entry)
-    local configHome = config.ensureOverlay()
+local function buildYaziCommand(entry, initialWidth)
+    local configHome = config.ensureOverlay(initialWidth)
     state.effectiveConfigHome = configHome
     state.clientId = string.format('%.0f', vim.fn.localtime() * 1000000 + vim.fn.getpid() + state.generation)
     state.chooserFile = vim.fn.tempname()
@@ -45,6 +86,7 @@ local function teardown(stopJob)
     state.effectiveConfigHome = nil
     state.generation = state.generation + 1
     dds.unsubscribe()
+    stopResizeMonitor()
     window.destroy()
     cleanupFiles()
     if stopJob and job and jobRunning(job) then
@@ -122,7 +164,8 @@ local function startYazi(path, openMode)
     window.ensureBuffer()
     window.show()
 
-    local command, configHome = buildYaziCommand(entry)
+    local size = window.currentSize()
+    local command, configHome = buildYaziCommand(entry, size and size.width)
     local ok, job = pcall(vim.fn.termopen, command, {
         cwd = vim.fn.getcwd(),
         env = configHome and {YAZI_CONFIG_HOME = configHome} or nil,
@@ -145,10 +188,12 @@ local function startYazi(path, openMode)
     end
 
     state.yaziJob = job
+    startResizeMonitor()
     dds.subscribe(job, state.clientId, configHome, M.openFiles)
     vim.defer_fn(function()
         if generation == state.generation and window.isVisible() then
             window.enterTerminal()
+            M.publishResize('open')
         end
     end, 50)
     return true
@@ -156,6 +201,39 @@ end
 
 function M.active()
     return jobRunning(state.yaziJob) and window.hasBuffer()
+end
+
+function M.publishResize(reason)
+    if not M.active() or not state.clientId then
+        return false
+    end
+
+    local size = window.currentSize()
+    if not size then
+        return false
+    end
+
+    return dds.publishTo(state.clientId, dds.eventResize, {
+        width = size.width,
+        height = size.height,
+        preset = size.preset,
+        reason = reason or 'window',
+    }, state.effectiveConfigHome)
+end
+
+function M.resize()
+    local changed = window.cycleLayout()
+    if changed then
+        M.publishResize('preset')
+    end
+    return changed
+end
+
+function M.resizeWindow()
+    observedColumns = vim.o.columns
+    observedLines = vim.o.lines
+    window.resize()
+    return M.publishResize('window')
 end
 
 function M.open(path, openMode)
@@ -167,6 +245,7 @@ function M.open(path, openMode)
             M.reveal(path)
         elseif not window.isVisible() then
             window.enterTerminal()
+            M.publishResize('show')
         end
         return true
     end
@@ -182,6 +261,7 @@ function M.toggle(opts)
             window.close()
             files.restoreOrigin(state.originTab, state.originWin)
         else
+            M.publishResize('show')
             window.enterTerminal()
         end
         return true
@@ -201,7 +281,9 @@ function M.show()
     if M.active() then
         if window.isVisible() then
             window.show()
+            M.publishResize('show')
         else
+            M.publishResize('show')
             window.enterTerminal()
         end
     else
@@ -215,6 +297,7 @@ function M.reveal(path)
         return
     end
     if not window.isVisible() then
+        M.publishResize('show')
         window.enterTerminal()
     end
     local target = path or files.currentEntry()

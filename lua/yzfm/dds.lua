@@ -2,17 +2,22 @@ local config = require('yzfm.config')
 
 local M = {}
 local eventOpen = 'nvim-yzfm-open'
+local eventResize = 'nvim-yzfm-resize'
 local subscription
 
 local function environment(configHome)
     return configHome and {YAZI_CONFIG_HOME = configHome} or nil
 end
 
+local function yaCommand()
+    return config.options and config.options.ya or 'ya'
+end
+
 function M.emitTo(receiver, action, argument, configHome)
     if not receiver then
         return
     end
-    local command = {config.options.ya, 'emit-to', tostring(receiver), action}
+    local command = {yaCommand(), 'emit-to', tostring(receiver), action}
     if argument then
         command[#command + 1] = argument
     end
@@ -22,6 +27,30 @@ function M.emitTo(receiver, action, argument, configHome)
         env = environment(configHome),
     })
 end
+
+function M.publishTo(receiver, kind, payload, configHome)
+    if receiver == nil or type(kind) ~= 'string' or kind == '' then
+        return false
+    end
+
+    local ok, body = pcall(vim.json.encode, payload)
+    if not ok then
+        return false
+    end
+
+    -- A remote kind may have no subscriber.  `ya pub-to` treats that as a
+    -- best-effort delivery, so deliberately discard stderr and the exit code.
+    -- The Neovim session must not report an error for an optional Yazi hook.
+    local job = vim.fn.jobstart({yaCommand(), 'pub-to', tostring(receiver), kind, '--json', body}, {
+        detach = true,
+        stdin = 'null',
+        env = environment(configHome),
+        on_stderr = function() end,
+    })
+    return type(job) == 'number' and job > 0
+end
+
+M.eventResize = eventResize
 
 function M.unsubscribe()
     local current = subscription
