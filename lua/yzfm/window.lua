@@ -5,8 +5,8 @@ local M = {}
 local state = {layoutIndex = 1}
 
 function M.defineHighlights()
-    api.nvim_set_hl(0, 'YaziNormal', {default = true, link = 'NormalFloat'})
-    api.nvim_set_hl(0, 'YaziBorder', {default = true, link = 'FloatBorder'})
+    api.nvim_set_hl(0, 'YzfmNormal', {default = true, link = 'NormalFloat'})
+    api.nvim_set_hl(0, 'YzfmBorder', {default = true, link = 'FloatBorder'})
 end
 
 local function validBuf(buf)
@@ -168,9 +168,9 @@ end
 local function windowHighlight()
     local borderHighlight = config.options.floating_window.border_highlight
     if type(borderHighlight) ~= 'string' or borderHighlight == '' then
-        return 'Normal:YaziNormal'
+        return 'Normal:YzfmNormal'
     end
-    return 'Normal:YaziNormal,FloatBorder:' .. borderHighlight
+    return 'Normal:YzfmNormal,FloatBorder:' .. borderHighlight
 end
 
 function M.show()

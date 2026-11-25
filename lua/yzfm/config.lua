@@ -56,7 +56,7 @@ local defaults = {
         },
         preset = 3,
         border = 'single',
-        border_highlight = 'YaziBorder',
+        border_highlight = 'YzfmBorder',
         shadow = 70,
         title = nil,
         title_pos = 'center',

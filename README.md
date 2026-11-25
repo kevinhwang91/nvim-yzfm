@@ -72,7 +72,7 @@ require('yzfm').setup({
         },
         preset = 3,
         border = 'single',
-        border_highlight = 'YaziBorder',
+        border_highlight = 'YzfmBorder',
         title = nil,
         title_pos = 'center',
         shadow = 70,
@@ -91,11 +91,11 @@ set `picker = false` to keep the floating session visible. `preset` is a
 one-based index into `floating_window.presets`; `shadow` accepts `false` or a
 blend value from `0` to `100`. `~` cycles `small → tiny → large`.
 
-The floating window uses `YaziNormal` and `YaziBorder` highlights:
+The floating window uses `YzfmNormal` and `YzfmBorder` highlights:
 
 ```lua
-vim.api.nvim_set_hl(0, 'YaziNormal', {link = 'CursorLine'})
-vim.api.nvim_set_hl(0, 'YaziBorder', {fg = '#e5c07b'})
+vim.api.nvim_set_hl(0, 'YzfmNormal', {link = 'CursorLine'})
+vim.api.nvim_set_hl(0, 'YzfmBorder', {fg = '#e5c07b'})
 ```
 
 ## Existing Yazi configuration
